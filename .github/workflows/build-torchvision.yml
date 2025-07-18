@@ -4,8 +4,8 @@ on:
   workflow_dispatch:  # 手动触发
 
 env:
-  VERSION: "0.19.1"  # TorchVision 版本号
-  TORCH_VERSION: "2.4.1"  # PyTorch 版本号
+  VERSION: "0.20.0"  # TorchVision 版本号
+  TORCH_VERSION: "2.5.0"  # PyTorch 版本号
 
 jobs:
   build:
@@ -68,7 +68,7 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip setuptools wheel
           pip install torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_11_0_$CMAKE_OSX_ARCHITECTURES.whl
-          pip install --force-reinstall cmake==3.25.2 numpy==2.0.2
+          pip install --force-reinstall cmake==3.25.2 numpy==2.1.3
 
           cd vision
           git clean -xfd
