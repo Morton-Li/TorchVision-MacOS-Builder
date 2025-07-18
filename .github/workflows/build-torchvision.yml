@@ -1,0 +1,110 @@
+name: Build TorchVision
+
+on:
+  workflow_dispatch:  # 手动触发
+
+env:
+  VERSION: "0.18.0"  # TorchVision 版本号
+  TORCH_VERSION: "2.3.0"  # PyTorch 版本号
+
+jobs:
+  build:
+    runs-on: macos-13
+    strategy:
+      matrix:
+        python_version: [ 3.11, 3.12 ]
+    name: Build TorchVision for Python ${{ matrix.python_version }}
+    steps:
+      - name: Restore TorchVision source from cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: vision
+          key: vision-${{ env.VERSION }}
+
+      - name: Clone TorchVision repo
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "v${{ env.VERSION }}" --recursive https://github.com/pytorch/vision.git vision
+          git -C vision submodule update --init --recursive --depth 1 || git -C vision submodule update --init --recursive --depth 10 || git -C vision submodule update --init --recursive
+
+      - name: Save TorchVision source to cache
+        id: cache-save
+        if: steps.restore-cache.outputs.cache-hit != 'true' && matrix.python_version == '3.12'
+        uses: actions/cache/save@v4
+        with:
+          path: vision
+          key: vision-${{ env.VERSION }}
+
+      - name: Build wheel
+        run: |
+          set -e
+          brew install ninja jpeg
+          sudo xcode-select --switch /Applications/Xcode_14.3.app
+
+          export BUILD_VERSION=${VERSION}
+          export MAX_JOBS=$(sysctl -n hw.logicalcpu)
+          if [ "$MAX_JOBS" -gt 4 ]; then
+              export MAX_JOBS=4
+          fi
+          export TORCHVISION_INCLUDE="/usr/local/opt/jpeg/include"
+          export TORCHVISION_LIBRARY="/usr/local/opt/jpeg/lib"
+
+          export CMAKE_OSX_ARCHITECTURES="x86_64"
+          export _PYTHON_HOST_PLATFORM="macosx-10.13-$CMAKE_OSX_ARCHITECTURES"
+          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export CC="/Applications/Xcode_14.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
+          export CXX="/Applications/Xcode_14.3.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          export LDSHARED="clang -bundle -undefined dynamic_lookup -isysroot $SDKROOT -arch $CMAKE_OSX_ARCHITECTURES"
+
+          PY_SHORT=$(echo "${{ matrix.python_version }}" | sed 's/\.//')
+
+          wget https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/download/v${TORCH_VERSION}/torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_11_0_$CMAKE_OSX_ARCHITECTURES.whl
+
+          mkdir -p wheels
+
+          python${{ matrix.python_version }} -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_11_0_$CMAKE_OSX_ARCHITECTURES.whl
+          pip install --force-reinstall cmake==3.25.2 numpy==1.26.4
+
+          cd vision
+          git clean -xfd
+
+          python setup.py bdist_wheel --plat-name=macosx_11_0_$CMAKE_OSX_ARCHITECTURES
+
+          cp dist/*.whl ../wheels/
+          cd ..
+          
+          if [ "$(ls wheels/*.whl 2>/dev/null | wc -l)" -eq 0 ]; then
+            echo "❌ No wheel built. Tag will not be created."
+            exit 1
+          fi
+
+      - name: Upload wheels as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vision-${{ env.VERSION }}-py${{ matrix.python_version }}-macosx-wheel
+          path: wheels/*.whl
+
+  release:
+    needs: [build]
+    runs-on: macos-13
+    name: Create release and upload wheels
+    steps:
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          merge-multiple: true
+
+      - name: Create release and upload wheels
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: "TorchVision ${{ env.VERSION }} Release"
+          files: wheels/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
