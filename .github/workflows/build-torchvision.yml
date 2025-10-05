@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     strategy:
       matrix:
         python_version: [ 3.11, 3.12, 3.13 ]
@@ -40,7 +40,7 @@ jobs:
         run: |
           set -e
           brew install jpeg
-          sudo xcode-select --switch /Applications/Xcode_15.2.app
+          sudo xcode-select --switch /Applications/Xcode_16.4.app
 
           export BUILD_VERSION=${VERSION}
           export MAX_JOBS=$(sysctl -n hw.logicalcpu)
@@ -53,8 +53,8 @@ jobs:
           export CMAKE_OSX_ARCHITECTURES="x86_64"
           export _PYTHON_HOST_PLATFORM="macosx-10.13-$CMAKE_OSX_ARCHITECTURES"
           export MACOSX_DEPLOYMENT_TARGET=11.0
-          export CC="/Applications/Xcode_15.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
-          export CXX="/Applications/Xcode_15.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
+          export CC="/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
+          export CXX="/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           export LDSHARED="clang -bundle -undefined dynamic_lookup -isysroot $SDKROOT -arch $CMAKE_OSX_ARCHITECTURES"
 
@@ -91,7 +91,7 @@ jobs:
 
   release:
     needs: [build]
-    runs-on: macos-13
+    runs-on: macos-15-intel
     name: Create release and upload wheels
     steps:
       - name: Download all wheel artifacts
