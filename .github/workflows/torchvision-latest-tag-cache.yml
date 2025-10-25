@@ -42,13 +42,14 @@ jobs:
             fi
           fi
 
-      - name: Restore TorchVision source from cache
+      - name: Check TorchVision cache existence
         if: steps.get_tag.outputs.skip == 'false'
         id: restore-cache
         uses: actions/cache/restore@v4
         with:
           path: vision
-          key: vision-${{ steps.get_tag.outputs.LATEST_VERSION }}
+          key: vision-${{ steps.get_tag.outputs.LATEST_TAG }}
+          lookup-only: true
 
       - name: Clone TorchVision repo
         if: steps.get_tag.outputs.skip == 'false' && steps.restore-cache.outputs.cache-hit != 'true'
@@ -62,4 +63,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: vision
-          key: vision-${{ steps.get_tag.outputs.LATEST_VERSION }}
+          key: vision-${{ steps.get_tag.outputs.LATEST_TAG }}

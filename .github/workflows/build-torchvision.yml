@@ -4,8 +4,8 @@ on:
   workflow_dispatch:  # 手动触发
 
 env:
-  VERSION: "0.23.0"  # TorchVision 版本号
-  TORCH_VERSION: "2.8.0"  # PyTorch 版本号
+  VERSION: "0.24.0"  # TorchVision 版本号
+  TORCH_VERSION: "2.9.0"  # PyTorch 版本号
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: vision
-          key: vision-${{ env.VERSION }}
+          key: vision-v${{ env.VERSION }}
 
       - name: Clone TorchVision repo
         if: steps.restore-cache.outputs.cache-hit != 'true'
@@ -34,15 +34,19 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: vision
-          key: vision-${{ env.VERSION }}
+          key: vision-v${{ env.VERSION }}
 
       - name: Build wheel
+        env:
+          BUILD_VERSION: ${{ env.VERSION }}  # TorchVision 版本号
+          # TORCH_VERSION: ${{ env.TORCH_VERSION }}  # PyTorch 版本号
+          CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
+          MACOSX_DEPLOYMENT_TARGET: "11.0"  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
         run: |
           set -e
           brew install jpeg
           sudo xcode-select --switch /Applications/Xcode_16.4.app
 
-          export BUILD_VERSION=${VERSION}
           export MAX_JOBS=$(sysctl -n hw.logicalcpu)
           if [ "$MAX_JOBS" -gt 4 ]; then
               export MAX_JOBS=4
@@ -50,30 +54,28 @@ jobs:
           export TORCHVISION_INCLUDE="/usr/local/opt/jpeg/include"
           export TORCHVISION_LIBRARY="/usr/local/opt/jpeg/lib"
 
-          export CMAKE_OSX_ARCHITECTURES="x86_64"
-          export _PYTHON_HOST_PLATFORM="macosx-10.13-$CMAKE_OSX_ARCHITECTURES"
-          export MACOSX_DEPLOYMENT_TARGET=11.0
+          export _PYTHON_HOST_PLATFORM="macosx-$MACOSX_DEPLOYMENT_TARGET-$CMAKE_OSX_ARCHITECTURES"
           export CC="/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
           export CXX="/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          export LDSHARED="clang -bundle -undefined dynamic_lookup -isysroot $SDKROOT -arch $CMAKE_OSX_ARCHITECTURES"
-
-          PY_SHORT=$(echo "${{ matrix.python_version }}" | sed 's/\.//')
-
-          wget https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/download/v${TORCH_VERSION}/torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_11_0_$CMAKE_OSX_ARCHITECTURES.whl
 
           mkdir -p wheels
 
+          PY_SHORT=$(echo "${{ matrix.python_version }}" | sed 's/\.//')
+          DEPLOYMENT_TARGET=$(echo $MACOSX_DEPLOYMENT_TARGET | sed 's/\./_/g')
+
+          wget https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/download/v${TORCH_VERSION}/torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
+
           python${{ matrix.python_version }} -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          pip install torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_11_0_$CMAKE_OSX_ARCHITECTURES.whl
+          pip install --upgrade pip setuptools wheel numpy
+          pip install torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
           pip install --force-reinstall cmake==3.31.6
 
           cd vision
           git clean -xfd
 
-          python setup.py bdist_wheel --plat-name=macosx_11_0_$CMAKE_OSX_ARCHITECTURES
+          python setup.py bdist_wheel
 
           cp dist/*.whl ../wheels/
           cd ..
@@ -91,6 +93,7 @@ jobs:
 
   release:
     needs: [build]
+    if: (needs.build.result == 'success') && (startsWith(github.ref, 'refs/heads/main'))
     runs-on: macos-15-intel
     name: Create release and upload wheels
     steps:
