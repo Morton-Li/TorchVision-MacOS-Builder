@@ -93,6 +93,7 @@ jobs:
 
   release:
     needs: [build]
+    if: (needs.build.result == 'success') && (startsWith(github.ref, 'refs/heads/main'))
     runs-on: macos-15-intel
     name: Create release and upload wheels
     steps:
