@@ -63,12 +63,12 @@ jobs:
           PY_SHORT=$(echo "${{ matrix.python_version }}" | sed 's/\.//')
           DEPLOYMENT_TARGET=$(echo $MACOSX_DEPLOYMENT_TARGET | sed 's/\./_/g')
 
-          wget https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/download/v${TORCH_VERSION}/torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_$DEPLOYMENT_TARGET_$CMAKE_OSX_ARCHITECTURES.whl
+          wget https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/download/v${TORCH_VERSION}/torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
 
           python${{ matrix.python_version }} -m venv venv
           source venv/bin/activate
           pip install --upgrade pip setuptools wheel numpy
-          pip install torch-${TORCH_VERSION}-cp$PY_SHORT-cp$PY_SHORT-macosx_$DEPLOYMENT_TARGET_$CMAKE_OSX_ARCHITECTURES.whl
+          pip install torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
           pip install --force-reinstall cmake==3.31.6
 
           cd vision
