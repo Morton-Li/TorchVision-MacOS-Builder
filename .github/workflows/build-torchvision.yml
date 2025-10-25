@@ -40,8 +40,8 @@ jobs:
         env:
           BUILD_VERSION: ${{ env.VERSION }}  # TorchVision 版本号
           # TORCH_VERSION: ${{ env.TORCH_VERSION }}  # PyTorch 版本号
-          CMAKE_OSX_ARCHITECTURES: x86_64  # 架构（仅使用变量以便后续引用，对编译无影响）
-          MACOSX_DEPLOYMENT_TARGET: 11.0  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
+          CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
+          MACOSX_DEPLOYMENT_TARGET: "11.0"  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
         run: |
           set -e
           brew install jpeg

@@ -46,8 +46,8 @@ jobs:
 
       - name: Install dependencies
         env:
-          CMAKE_OSX_ARCHITECTURES: x86_64  # 架构（仅使用变量以便后续引用，对编译无影响）
-          MACOSX_DEPLOYMENT_TARGET: 11.0  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
+          CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
+          MACOSX_DEPLOYMENT_TARGET: "11.0"  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
           PY_VERSION: 3.12
           TORCH_VERSION: ${{ github.event.inputs.torch-version }}
         run: |
