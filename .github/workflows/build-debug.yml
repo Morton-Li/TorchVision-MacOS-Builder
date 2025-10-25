@@ -51,7 +51,8 @@ jobs:
           PY_VERSION: 3.12
           TORCH_VERSION: ${{ github.event.inputs.torch-version }}
         run: |
-          brew install ccache
+          brew install jpeg ccache
+          sudo xcode-select --switch /Applications/Xcode_16.4.app
 
           DEPLOYMENT_TARGET=$(echo $MACOSX_DEPLOYMENT_TARGET | sed 's/\./_/g')
           PY_SHORT=$(echo "$PY_VERSION" | sed 's/\.//')
