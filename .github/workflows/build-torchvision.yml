@@ -4,8 +4,8 @@ on:
   workflow_dispatch:  # 手动触发
 
 env:
-  VERSION: "0.24.0"  # TorchVision 版本号
-  TORCH_VERSION: "2.9.0"  # PyTorch 版本号
+  BUILD_VERSION: "0.24.1"  # TorchVision 构建版本号
+  TORCH_VERSION: "2.9.1"  # PyTorch 版本号
 
 jobs:
   build:
@@ -20,12 +20,12 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: vision
-          key: vision-v${{ env.VERSION }}
+          key: vision-v${{ env.BUILD_VERSION }}
 
       - name: Clone TorchVision repo
         if: steps.restore-cache.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 --branch "v${{ env.VERSION }}" --recursive https://github.com/pytorch/vision.git vision
+          git clone --depth 1 --branch "v${{ env.BUILD_VERSION }}" --recursive https://github.com/pytorch/vision.git vision
           git -C vision submodule update --init --recursive --depth 1 || git -C vision submodule update --init --recursive --depth 10 || git -C vision submodule update --init --recursive
 
       - name: Save TorchVision source to cache
@@ -34,11 +34,11 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: vision
-          key: vision-v${{ env.VERSION }}
+          key: vision-v${{ env.BUILD_VERSION }}
 
       - name: Build wheel
         env:
-          BUILD_VERSION: ${{ env.VERSION }}  # TorchVision 版本号
+          # BUILD_VERSION: ${{ env.BUILD_VERSION }}  # TorchVision 版本号
           # TORCH_VERSION: ${{ env.TORCH_VERSION }}  # PyTorch 版本号
           CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
           MACOSX_DEPLOYMENT_TARGET: "11.0"  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
@@ -88,7 +88,7 @@ jobs:
       - name: Upload wheels as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vision-${{ env.VERSION }}-py${{ matrix.python_version }}-macosx-wheel
+          name: vision-${{ env.BUILD_VERSION }}-py${{ matrix.python_version }}-macosx-wheel
           path: wheels/*.whl
 
   release:
@@ -106,8 +106,8 @@ jobs:
       - name: Create release and upload wheels
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}
-          name: "TorchVision ${{ env.VERSION }} Release"
+          tag_name: v${{ env.BUILD_VERSION }}
+          name: "TorchVision ${{ env.BUILD_VERSION }} Release"
           files: wheels/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
