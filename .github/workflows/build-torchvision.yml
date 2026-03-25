@@ -4,8 +4,8 @@ on:
   workflow_dispatch:  # 手动触发
 
 env:
-  BUILD_VERSION: "0.25.0"  # TorchVision 构建版本号
-  TORCH_VERSION: "2.10.0"  # PyTorch 版本号
+  BUILD_VERSION: "0.26.0"  # TorchVision 构建版本号
+  TORCH_VERSION: "2.11.0"  # PyTorch 版本号
 
 jobs:
   build:
