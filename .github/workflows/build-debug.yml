@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'TorchVision version (e.g., 0.24.0)'
+        description: 'TorchVision version (e.g., 0.29.0)'
         required: true
-        default: ''
+        default: '0.29.0'
       torch-version:
-        description: 'PyTorch version (e.g., 2.9.0)'
+        description: 'PyTorch version (e.g., 2.14.0)'
         required: true
-        default: '2.9.0'
+        default: '2.14.0'
       run-on:
         description: 'Run on which OS?'
         required: true
@@ -19,6 +19,9 @@ on:
 jobs:
   debug_session:
     runs-on: ${{ github.event.inputs.run-on }}
+    env:
+      BUILD_VERSION: ${{ github.event.inputs.version }}
+      TORCH_VERSION: ${{ github.event.inputs.torch-version }}
     steps:
       - name: Restore TorchVision source from cache
         id: restore-cache
@@ -48,8 +51,7 @@ jobs:
         env:
           CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
           MACOSX_DEPLOYMENT_TARGET: "11.0"  # 最低支持的 macOS 版本（仅使用变量以便后续引用，对编译无影响）
-          PY_VERSION: 3.12
-          TORCH_VERSION: ${{ github.event.inputs.torch-version }}
+          PY_VERSION: '3.12'
         run: |
           brew install jpeg ccache
           sudo xcode-select --switch /Applications/Xcode_16.4.app
@@ -61,7 +63,7 @@ jobs:
 
           python$PY_VERSION -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip setuptools wheel numpy
+          pip install --upgrade pip setuptools wheel build ninja packaging numpy
           pip install torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
           pip install --force-reinstall cmake==3.31.6
 

@@ -4,15 +4,15 @@ on:
   workflow_dispatch:  # 手动触发
 
 env:
-  BUILD_VERSION: "0.28.0"  # TorchVision 构建版本号
-  TORCH_VERSION: "2.13.0"  # PyTorch 版本号
+  BUILD_VERSION: "0.29.0"  # TorchVision 构建版本号
+  TORCH_VERSION: "2.14.0"  # PyTorch 版本号
 
 jobs:
   build:
     runs-on: macos-15-intel
     strategy:
       matrix:
-        python_version: [ 3.11, 3.12, 3.13, 3.14 ]
+        python_version: [ '3.11', '3.12', '3.13', '3.14' ]
     name: Build TorchVision for Python ${{ matrix.python_version }}
     steps:
       - name: Restore TorchVision source from cache
@@ -68,22 +68,59 @@ jobs:
 
           python${{ matrix.python_version }} -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip setuptools wheel numpy
+          pip install --upgrade pip setuptools wheel build ninja packaging numpy
           pip install torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
           pip install --force-reinstall cmake==3.31.6
 
           cd vision
           git clean -xfd
 
-          python setup.py bdist_wheel
+          # Reuse the custom PyTorch wheel installed in this environment.
+          python -m build --wheel --no-isolation
 
-          cp dist/*.whl ../wheels/
+          EXPECTED_WHEEL="torchvision-${BUILD_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl"
+          cp "dist/${EXPECTED_WHEEL}" ../wheels/
           cd ..
           
           if [ "$(ls wheels/*.whl 2>/dev/null | wc -l)" -eq 0 ]; then
             echo "❌ No wheel built. Tag will not be created."
             exit 1
           fi
+
+      - name: Test TorchVision wheel
+        env:
+          CMAKE_OSX_ARCHITECTURES: "x86_64"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          set -e
+          PY_SHORT=$(echo "${{ matrix.python_version }}" | sed 's/\.//')
+          DEPLOYMENT_TARGET=$(echo $MACOSX_DEPLOYMENT_TARGET | sed 's/\./_/g')
+
+          python${{ matrix.python_version }} -m venv test-venv
+          source test-venv/bin/activate
+          pip install --upgrade pip setuptools numpy
+          pip install torch-${TORCH_VERSION}-cp${PY_SHORT}-cp${PY_SHORT}-macosx_${DEPLOYMENT_TARGET}_${CMAKE_OSX_ARCHITECTURES}.whl
+          pip install wheels/*.whl
+          pip check
+          python - <<'PY'
+          import os
+          import torch
+          import torchvision
+          from torchvision.io import decode_jpeg, encode_jpeg
+          from torchvision.ops import nms
+
+          assert torch.__version__.split("+")[0] == os.environ["TORCH_VERSION"], torch.__version__
+          assert torchvision.__version__.split("+")[0] == os.environ["BUILD_VERSION"], torchvision.__version__
+
+          boxes = torch.tensor([[0.0, 0.0, 10.0, 10.0], [1.0, 1.0, 9.0, 9.0], [20.0, 20.0, 30.0, 30.0]])
+          scores = torch.tensor([0.9, 0.8, 0.7])
+          assert nms(boxes, scores, 0.5).tolist() == [0, 2]
+
+          image = torch.full((3, 8, 8), 128, dtype=torch.uint8)
+          decoded = decode_jpeg(encode_jpeg(image))
+          assert decoded.shape == image.shape and decoded.dtype == image.dtype
+          print(f"TorchVision {torchvision.__version__} / PyTorch {torch.__version__}: native NMS and JPEG OK")
+          PY
 
       - name: Upload wheels as artifact
         uses: actions/upload-artifact@v4
