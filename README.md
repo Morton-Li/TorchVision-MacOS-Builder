@@ -19,12 +19,18 @@ The output includes `.whl` files for **multiple Python versions**, allowing user
 
 ## 🛠 使用方式 How to Use
 
+当前构建目标为 **TorchVision 0.29.0 + PyTorch 2.14.0**。上游 0.29 版本引入了基于 PyTorch 2.14 的 ABI 稳定性，详见[发布说明](https://github.com/pytorch/vision/releases/tag/v0.29.0)。
+
+The current build target is **TorchVision 0.29.0 + PyTorch 2.14.0**. Upstream 0.29 introduces ABI stability starting with PyTorch 2.14.
+
 1. 从 [Releases 页面](../../releases) 下载你所需版本的 `.whl`：
-   示例文件名：`torchvision-0.28.0-cp313-cp313-macosx_11_0_x86_64.whl`
+   示例文件名：`torchvision-0.29.0-cp313-cp313-macosx_11_0_x86_64.whl`
+   同时从 [PyTorch macOS Builder Releases](https://github.com/Morton-Li/PyTorch-MacOS-Builder/releases/tag/v2.14.0) 下载相同 Python 版本的 PyTorch wheel。
 2. 使用 `pip` 安装：
 
    ```bash
-   pip install torchvision-0.28.0-cp313-cp313-macosx_11_0_x86_64.whl
+   pip install torch-2.14.0-cp313-cp313-macosx_11_0_x86_64.whl
+   pip install torchvision-0.29.0-cp313-cp313-macosx_11_0_x86_64.whl
    ```
 3. 验证是否安装成功（需确保已安装兼容的 PyTorch）：
 
