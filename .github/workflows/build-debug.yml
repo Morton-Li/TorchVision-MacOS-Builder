@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'TorchVision version (e.g., 0.29.1)'
+        description: 'TorchVision version (e.g., 0.29.2)'
         required: true
-        default: '0.29.1'
+        default: '0.29.2'
       torch-version:
-        description: 'PyTorch version (e.g., 2.14.1)'
+        description: 'PyTorch version (e.g., 2.15.0)'
         required: true
-        default: '2.14.1'
+        default: '2.15.0'
       run-on:
         description: 'Run on which OS?'
         required: true
