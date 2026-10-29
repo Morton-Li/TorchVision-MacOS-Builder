@@ -43,6 +43,7 @@ jobs:
 
       - name: Build wheel
         env:
+          ARCHFLAGS: "-arch x86_64"  # Override universal2 flags from the Python installer.
           # BUILD_VERSION: ${{ env.BUILD_VERSION }}  # TorchVision 版本号
           # TORCH_VERSION: ${{ env.TORCH_VERSION }}  # PyTorch 版本号
           CMAKE_OSX_ARCHITECTURES: "x86_64"  # 架构（仅使用变量以便后续引用，对编译无影响）
@@ -91,6 +92,24 @@ jobs:
             echo "❌ No wheel built. Tag will not be created."
             exit 1
           fi
+
+      - name: Verify wheel architecture
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheels = list(Path("wheels").glob("*.whl"))
+          assert len(wheels) == 1, wheels
+          with ZipFile(wheels[0]) as wheel:
+              libraries = [name for name in wheel.namelist() if name.endswith((".so", ".dylib"))]
+              assert libraries, "No native libraries in wheel"
+              for name in libraries:
+                  # MH_MAGIC_64 followed by CPU_TYPE_X86_64, both little-endian.
+                  header = wheel.read(name)[:8]
+                  assert header.hex() == "cffaedfe07000001", (name, header.hex())
+                  print(f"Verified x86_64 Mach-O: {name}")
+          PY
 
       - name: Upload wheels as artifact
         uses: actions/upload-artifact@v4
